@@ -97,9 +97,9 @@ class LaMetricClient {
     // Format altitude
     let altText;
     if (altitudeFt >= 10000) {
-      altText = `${(altitudeFt / 1000).toFixed(0)}k ft`;
+      altText = `${(altitudeFt / 1000).toFixed(0)}k`;
     } else if (altitudeFt > 0) {
-      altText = `${altitudeFt.toLocaleString()} ft`;
+      altText = `${altitudeFt.toLocaleString()}`;
     } else {
       altText = 'Ground';
     }
@@ -127,7 +127,7 @@ class LaMetricClient {
     const payload = {
       priority: 'info',
       icon_type: 'none',
-      lifetime: 10000,  // Dismiss after 8 seconds and return to clock
+      lifetime: 10000,  // Dismiss after 10 seconds and return to clock
       model: {
         cycles: 3,  // Show twice
         frames: [
