@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Environment files (contain secrets!)
+.env
+.env.local
+.env.*.local
+
+# Cursor IDE
+.cursor/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build output
+dist/
+build/
+
+# Temporary/debug files
+test-network.js
+.!*!.*
