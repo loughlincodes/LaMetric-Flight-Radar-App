@@ -8,6 +8,7 @@
     "server": "node src/server.js",
     "auth": "node src/oauth-server.js",
     "test-push": "node src/test-push.js",
+    "test-flight": "node src/test-push.js --flight-data",
     "send": "node src/test-push.js",
     "reset": "node src/reset.js"
   },

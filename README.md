@@ -118,7 +118,8 @@ npm start
 | `npm start` | Start the flight monitor service |
 | `npm run server` | Start with verbose logging |
 | `npm run test-push` | Send a test notification |
-| `npm run send -- "Your message"` | Send a custom message |
+| `npm run test-push -- "message"` | Send a custom message |
+| `npm run test-flight` | Send sample flight notification |
 | `npm run reset` | Dismiss all notifications |
 
 ## 🔧 Configuration Options
@@ -354,7 +355,7 @@ This app uses `curl` via `child_process` for HTTP requests to the LaMetric devic
     "frames": [
       {
         "icon": "i8879",
-        "text": "EIN123  A320  35k ft  2.5mi"
+        "text": "EIN123 A320 35k 2.5mi"
       }
     ],
     "sound": {
