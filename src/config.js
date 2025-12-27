@@ -17,13 +17,17 @@ module.exports = {
   // Tracking configuration
   tracking: {
     radiusMiles: parseFloat(process.env.RADIUS_MILES) || 10,
-    pollIntervalSeconds: parseInt(process.env.POLL_INTERVAL_SECONDS) || 30,
-    // Don't re-notify for same plane within this many minutes
+    pollIntervalSeconds: parseInt(process.env.POLL_INTERVAL_SECONDS) || 60,
     notificationCooldownMinutes: parseInt(process.env.COOLDOWN_MINUTES) || 5,
+    // Fetch aircraft type/model (uses extra API credits per aircraft)
+    fetchMetadata: process.env.FETCH_AIRCRAFT_METADATA === 'true',
   },
 
-  // OpenSky API (no auth needed for basic usage)
+  // OpenSky API Configuration
   opensky: {
     baseUrl: 'https://opensky-network.org/api',
+    // Optional authentication (10x more API credits)
+    username: process.env.OPENSKY_USERNAME || null,
+    password: process.env.OPENSKY_PASSWORD || null,
   },
 };

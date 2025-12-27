@@ -81,12 +81,15 @@ class FlightMonitor {
           continue;
         }
 
-        // Fetch aircraft metadata (type, etc.)
-        const enriched = await this.opensky.enrichWithMetadata(plane);
+        // Optionally fetch aircraft metadata (uses extra API credits!)
+        let enriched = plane;
+        if (config.tracking.fetchMetadata) {
+          enriched = await this.opensky.enrichWithMetadata(plane);
+        }
 
         const callsign = enriched.callsign || enriched.icao24;
         const altitude = OpenSkyClient.metersToFeet(enriched.baroAltitude || enriched.geoAltitude);
-        const typecode = enriched.typecode;
+        const typecode = enriched.typecode || null;
         const distance = plane.distanceMiles;
 
         // Log what we found
@@ -129,6 +132,7 @@ class FlightMonitor {
     console.log(`📏 Radius: ${config.tracking.radiusMiles} miles`);
     console.log(`⏱️  Poll interval: ${config.tracking.pollIntervalSeconds} seconds`);
     console.log(`🔕 Cooldown: ${config.tracking.notificationCooldownMinutes} minutes`);
+    console.log(`🛩️  Aircraft type lookup: ${config.tracking.fetchMetadata ? 'ON' : 'OFF (saves API credits)'}`);
     console.log('');
 
     this.isRunning = true;

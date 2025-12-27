@@ -11,25 +11,91 @@ const config = require('./config');
 // Cache for aircraft metadata (type, registration, etc.)
 const metadataCache = new Map();
 
+// Rate limit state
+let rateLimitedUntil = 0;
+
 class OpenSkyClient {
   constructor() {
     this.baseUrl = config.opensky.baseUrl;
+    this.username = config.opensky.username;
+    this.password = config.opensky.password;
+    this.hasAuth = !!(this.username && this.password);
+
+    if (this.hasAuth) {
+      console.log(`🔐 OpenSky: Authenticated as ${this.username}`);
+    } else {
+      console.log('🔓 OpenSky: Anonymous mode (limited to 400 credits/day)');
+      console.log('   Tip: Register free at opensky-network.org for 10x more credits');
+    }
+  }
+
+  /**
+   * Check if we're currently rate limited
+   */
+  isRateLimited() {
+    if (Date.now() < rateLimitedUntil) {
+      const waitSecs = Math.ceil((rateLimitedUntil - Date.now()) / 1000);
+      console.log(`⏳ Rate limited, waiting ${waitSecs}s...`);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Set rate limit backoff
+   */
+  setRateLimited(seconds = 60) {
+    rateLimitedUntil = Date.now() + (seconds * 1000);
+    console.log(`⚠️  Rate limited! Backing off for ${seconds} seconds.`);
   }
 
   /**
    * Execute a curl request (Windows + Unix compatible)
    */
   curlGet(url) {
+    // Check rate limit first
+    if (this.isRateLimited()) {
+      return null;
+    }
+
     // Use curl.exe on Windows to avoid PowerShell's Invoke-WebRequest alias
     const curlCmd = process.platform === 'win32' ? 'curl.exe' : 'curl';
 
+    // Build command with optional authentication
+    let cmd = `${curlCmd} -s -w "\\nHTTP_STATUS:%{http_code}"`;
+    
+    if (this.hasAuth) {
+      cmd += ` -u "${this.username}:${this.password}"`;
+    }
+    
+    cmd += ` "${url}"`;
+
     try {
-      const result = execSync(`${curlCmd} -s "${url}"`, {
-        timeout: 15000,
+      const result = execSync(cmd, { 
+        timeout: 15000, 
         encoding: 'utf8',
-        shell: true
+        shell: true 
       });
-      return JSON.parse(result);
+
+      // Parse response and HTTP status
+      const lines = result.trim().split('\n');
+      const statusLine = lines.pop();
+      const body = lines.join('\n');
+      const httpStatus = statusLine.replace('HTTP_STATUS:', '');
+
+      // Handle rate limiting
+      if (httpStatus === '429') {
+        this.setRateLimited(60); // Back off for 60 seconds
+        return null;
+      }
+
+      // Handle other errors
+      if (httpStatus !== '200') {
+        console.error(`❌ OpenSky API error: HTTP ${httpStatus}`);
+        return null;
+      }
+
+      return JSON.parse(body);
     } catch (error) {
       console.error('❌ OpenSky request failed:', error.message);
       return null;
@@ -53,6 +119,7 @@ class OpenSkyClient {
 
   /**
    * Get aircraft metadata (type, registration) from ICAO24
+   * Note: Each call uses API credits!
    */
   async getAircraftMetadata(icao24) {
     // Check cache first
@@ -81,16 +148,6 @@ class OpenSkyClient {
     }
 
     metadataCache.set(icao24, null);
-    return null;
-  }
-
-  /**
-   * Try to get route info from callsign
-   * Note: This is a heuristic - real route data would need FlightAware/FlightRadar24 API
-   */
-  guessRouteFromCallsign(callsign) {
-    // Many airlines encode route info in callsign, but it's not standardized
-    // For now, return null - we'd need a paid API for accurate routes
     return null;
   }
 
@@ -129,11 +186,11 @@ class OpenSkyClient {
   }
 
   /**
-   * Fetch aircraft near a location with metadata
+   * Fetch aircraft near a location
    */
   async getAircraftNear(lat, lon, radiusMiles) {
     const bbox = this.calculateBoundingBox(lat, lon, radiusMiles);
-    console.log(`🔍 Searching for aircraft within ${radiusMiles} miles of (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
+    console.log(`🔍 Searching for aircraft within ${radiusMiles} miles`);
 
     const aircraft = await this.getStatesInBox(bbox);
 
@@ -146,6 +203,7 @@ class OpenSkyClient {
 
   /**
    * Enrich aircraft with metadata (type, etc.)
+   * Only call this if FETCH_AIRCRAFT_METADATA=true
    */
   async enrichWithMetadata(aircraft) {
     const metadata = await this.getAircraftMetadata(aircraft.icao24);
