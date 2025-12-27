@@ -24,10 +24,10 @@ class OpenSkyClient {
     const curlCmd = process.platform === 'win32' ? 'curl.exe' : 'curl';
 
     try {
-      const result = execSync(`${curlCmd} -s "${url}"`, { 
-        timeout: 15000, 
+      const result = execSync(`${curlCmd} -s "${url}"`, {
+        timeout: 15000,
         encoding: 'utf8',
-        shell: true 
+        shell: true
       });
       return JSON.parse(result);
     } catch (error) {

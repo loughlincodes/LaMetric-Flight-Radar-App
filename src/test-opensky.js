@@ -46,21 +46,21 @@ console.log('📡 Making request...\n');
 try {
   const cmd = `${curlCmd} -s -w "\\n\\nHTTP_CODE:%{http_code}" "${url}"`;
   const result = execSync(cmd, { timeout: 30000, encoding: 'utf8', shell: true });
-  
+
   // Split response and HTTP code
   const parts = result.split('\n\nHTTP_CODE:');
   const body = parts[0];
   const httpCode = parts[1] ? parts[1].trim() : 'unknown';
-  
+
   console.log(`HTTP Status: ${httpCode}`);
   console.log(`Response length: ${body.length} bytes\n`);
-  
+
   if (httpCode === '200') {
     try {
       const data = JSON.parse(body);
       console.log(`✅ Success! Time: ${data.time}`);
       console.log(`   Aircraft in bounding box: ${data.states ? data.states.length : 0}`);
-      
+
       if (data.states && data.states.length > 0) {
         console.log('\n   First 5 aircraft:');
         data.states.slice(0, 5).forEach((s, i) => {
@@ -85,4 +85,3 @@ try {
   console.log('❌ Request failed:');
   console.log(`   ${error.message}`);
 }
-
