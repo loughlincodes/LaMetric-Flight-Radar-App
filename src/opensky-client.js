@@ -17,13 +17,21 @@ class OpenSkyClient {
   }
 
   /**
-   * Execute a curl request
+   * Execute a curl request (Windows + Unix compatible)
    */
   curlGet(url) {
+    // Use curl.exe on Windows to avoid PowerShell's Invoke-WebRequest alias
+    const curlCmd = process.platform === 'win32' ? 'curl.exe' : 'curl';
+
     try {
-      const result = execSync(`curl -s "${url}"`, { timeout: 15000, encoding: 'utf8' });
+      const result = execSync(`${curlCmd} -s "${url}"`, { 
+        timeout: 15000, 
+        encoding: 'utf8',
+        shell: true 
+      });
       return JSON.parse(result);
     } catch (error) {
+      console.error('❌ OpenSky request failed:', error.message);
       return null;
     }
   }
