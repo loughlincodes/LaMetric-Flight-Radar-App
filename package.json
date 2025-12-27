@@ -9,6 +9,7 @@
     "auth": "node src/oauth-server.js",
     "test-push": "node src/test-push.js",
     "test-flight": "node src/test-push.js --flight-data",
+    "test-opensky": "node src/test-opensky.js",
     "send": "node src/test-push.js",
     "reset": "node src/reset.js"
   },
