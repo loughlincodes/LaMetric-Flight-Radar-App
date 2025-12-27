@@ -20,23 +20,28 @@ class LaMetricClient {
 
   /**
    * Execute a curl request to the LaMetric device
+   * Works on Windows, macOS, and Linux
    */
   curlRequest(method, endpoint, data = null) {
     const url = `${this.baseUrl}${endpoint}`;
     const auth = `dev:${this.apiKey}`;
 
-    let cmd = `curl -s -X ${method} -u "${auth}"`;
+    // Use curl.exe on Windows to avoid PowerShell's Invoke-WebRequest alias
+    const curlCmd = process.platform === 'win32' ? 'curl.exe' : 'curl';
+
+    let cmd = `${curlCmd} -s -X ${method} -u "${auth}"`;
 
     if (data) {
       const jsonData = JSON.stringify(data);
-      const base64Data = Buffer.from(jsonData).toString('base64');
-      cmd += ` -H "Content-Type: application/json" -d "$(echo '${base64Data}' | base64 -d)"`;
+      // Escape double quotes for shell compatibility (works on Windows + Unix)
+      const escaped = jsonData.replace(/"/g, '\\"');
+      cmd += ` -H "Content-Type: application/json" -d "${escaped}"`;
     }
 
     cmd += ` "${url}"`;
 
     try {
-      const result = execSync(cmd, { timeout: 10000, encoding: 'utf8' });
+      const result = execSync(cmd, { timeout: 10000, encoding: 'utf8', shell: true });
       return { success: true, data: result ? JSON.parse(result) : {} };
     } catch (error) {
       console.error('❌ Request failed:', error.message);
