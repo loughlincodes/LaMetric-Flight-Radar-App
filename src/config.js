@@ -26,8 +26,9 @@ module.exports = {
   // OpenSky API Configuration
   opensky: {
     baseUrl: 'https://opensky-network.org/api',
-    // Optional authentication (10x more API credits)
-    username: process.env.OPENSKY_USERNAME || null,
-    password: process.env.OPENSKY_PASSWORD || null,
+    tokenUrl: 'https://opensky-network.org/oauth2/token',
+    // OAuth2 client credentials (10x more API credits)
+    clientId: process.env.OPENSKY_CLIENT_ID || null,
+    clientSecret: process.env.OPENSKY_CLIENT_SECRET || null,
   },
 };

@@ -2,6 +2,7 @@
  * OpenSky Network API Client
  *
  * Fetches real-time flight data for aircraft within a bounding box.
+ * Supports OAuth2 client credentials flow for new accounts (post March 2025).
  * API docs: https://openskynetwork.github.io/opensky-api/
  */
 
@@ -14,18 +15,72 @@ const metadataCache = new Map();
 // Rate limit state
 let rateLimitedUntil = 0;
 
+// OAuth2 token cache
+let accessToken = null;
+let tokenExpiresAt = 0;
+
 class OpenSkyClient {
   constructor() {
     this.baseUrl = config.opensky.baseUrl;
-    this.username = config.opensky.username;
-    this.password = config.opensky.password;
-    this.hasAuth = !!(this.username && this.password);
+    this.tokenUrl = config.opensky.tokenUrl;
+    this.clientId = config.opensky.clientId;
+    this.clientSecret = config.opensky.clientSecret;
+    this.hasAuth = !!(this.clientId && this.clientSecret);
 
     if (this.hasAuth) {
-      console.log(`🔐 OpenSky: Authenticated as ${this.username}`);
+      console.log(`🔐 OpenSky: OAuth2 client configured (${this.clientId})`);
     } else {
       console.log('🔓 OpenSky: Anonymous mode (limited to 400 credits/day)');
-      console.log('   Tip: Register free at opensky-network.org for 10x more credits');
+      console.log('   Tip: Register at opensky-network.org for 10x more credits');
+    }
+  }
+
+  /**
+   * Get curl command (Windows + Unix compatible)
+   */
+  getCurlCmd() {
+    return process.platform === 'win32' ? 'curl.exe' : 'curl';
+  }
+
+  /**
+   * Get OAuth2 access token
+   */
+  async getAccessToken() {
+    // Return cached token if still valid (with 60s buffer)
+    if (accessToken && Date.now() < tokenExpiresAt - 60000) {
+      return accessToken;
+    }
+
+    console.log('🔑 Fetching OAuth2 access token...');
+
+    const curlCmd = this.getCurlCmd();
+    const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
+
+    const cmd = `${curlCmd} -s -X POST "${this.tokenUrl}" -H "Authorization: Basic ${auth}" -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials"`;
+
+    try {
+      const result = execSync(cmd, {
+        timeout: 15000,
+        encoding: 'utf8',
+        shell: true
+      });
+
+      const data = JSON.parse(result);
+
+      if (data.access_token) {
+        accessToken = data.access_token;
+        // Token usually expires in 3600 seconds (1 hour)
+        const expiresIn = data.expires_in || 3600;
+        tokenExpiresAt = Date.now() + (expiresIn * 1000);
+        console.log(`✅ Got access token (expires in ${expiresIn}s)`);
+        return accessToken;
+      } else {
+        console.error('❌ No access token in response:', result);
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Failed to get access token:', error.message);
+      return null;
     }
   }
 
@@ -52,29 +107,31 @@ class OpenSkyClient {
   /**
    * Execute a curl request (Windows + Unix compatible)
    */
-  curlGet(url) {
+  async curlGet(url) {
     // Check rate limit first
     if (this.isRateLimited()) {
       return null;
     }
 
-    // Use curl.exe on Windows to avoid PowerShell's Invoke-WebRequest alias
-    const curlCmd = process.platform === 'win32' ? 'curl.exe' : 'curl';
+    const curlCmd = this.getCurlCmd();
 
-    // Build command with optional authentication
+    // Build command with optional OAuth2 authentication
     let cmd = `${curlCmd} -s -w "\\nHTTP_STATUS:%{http_code}"`;
-    
+
     if (this.hasAuth) {
-      cmd += ` -u "${this.username}:${this.password}"`;
+      const token = await this.getAccessToken();
+      if (token) {
+        cmd += ` -H "Authorization: Bearer ${token}"`;
+      }
     }
-    
+
     cmd += ` "${url}"`;
 
     try {
-      const result = execSync(cmd, { 
-        timeout: 15000, 
+      const result = execSync(cmd, {
+        timeout: 15000,
         encoding: 'utf8',
-        shell: true 
+        shell: true
       });
 
       // Parse response and HTTP status
@@ -85,7 +142,16 @@ class OpenSkyClient {
 
       // Handle rate limiting
       if (httpStatus === '429') {
-        this.setRateLimited(60); // Back off for 60 seconds
+        this.setRateLimited(60);
+        return null;
+      }
+
+      // Handle auth errors (token might have expired)
+      if (httpStatus === '401') {
+        console.log('🔄 Token expired, refreshing...');
+        accessToken = null;
+        tokenExpiresAt = 0;
+        // Retry once with fresh token
         return null;
       }
 
@@ -130,14 +196,14 @@ class OpenSkyClient {
     try {
       // OpenSky metadata endpoint
       const url = `${this.baseUrl}/metadata/aircraft/icao/${icao24}`;
-      const data = this.curlGet(url);
+      const data = await this.curlGet(url);
 
       if (data) {
         const metadata = {
           registration: data.registration || null,
           manufacturerName: data.manufacturerName || null,
           model: data.model || null,
-          typecode: data.typecode || null,  // e.g., "A320", "B738"
+          typecode: data.typecode || null,
           owner: data.owner || null,
         };
         metadataCache.set(icao24, metadata);
@@ -157,7 +223,7 @@ class OpenSkyClient {
   async getStatesInBox(bbox) {
     const url = `${this.baseUrl}/states/all?lamin=${bbox.lamin}&lamax=${bbox.lamax}&lomin=${bbox.lomin}&lomax=${bbox.lomax}`;
 
-    const data = this.curlGet(url);
+    const data = await this.curlGet(url);
 
     if (!data || !data.states || data.states.length === 0) {
       return [];
