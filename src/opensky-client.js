@@ -54,9 +54,9 @@ class OpenSkyClient {
     console.log('🔑 Fetching OAuth2 access token...');
 
     const curlCmd = this.getCurlCmd();
-    const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
 
-    const cmd = `${curlCmd} -s -X POST "${this.tokenUrl}" -H "Authorization: Basic ${auth}" -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials"`;
+    // OpenSky uses form-encoded client credentials (not Basic auth)
+    const cmd = `${curlCmd} -s -X POST "${this.tokenUrl}" -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials" -d "client_id=${this.clientId}" -d "client_secret=${this.clientSecret}"`;
 
     try {
       const result = execSync(cmd, {
@@ -75,7 +75,7 @@ class OpenSkyClient {
         console.log(`✅ Got access token (expires in ${expiresIn}s)`);
         return accessToken;
       } else {
-        console.error('❌ No access token in response:', result);
+        console.error('❌ No access token in response:', result.substring(0, 200));
         return null;
       }
     } catch (error) {

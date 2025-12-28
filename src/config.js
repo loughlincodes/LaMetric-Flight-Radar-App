@@ -26,7 +26,7 @@ module.exports = {
   // OpenSky API Configuration
   opensky: {
     baseUrl: 'https://opensky-network.org/api',
-    tokenUrl: 'https://opensky-network.org/oauth2/token',
+    tokenUrl: 'https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token',
     // OAuth2 client credentials (10x more API credits)
     clientId: process.env.OPENSKY_CLIENT_ID || null,
     clientSecret: process.env.OPENSKY_CLIENT_SECRET || null,
