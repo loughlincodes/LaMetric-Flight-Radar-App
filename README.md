@@ -4,7 +4,7 @@
 
 Get push notifications on your LaMetric Time whenever aircraft fly over your house. Perfect for aviation enthusiasts, plane spotters, or anyone curious about what's flying overhead.
 
-![LaMetric Time](https://github.com/user-attachments/assets/fcecfce3-a939-4b03-beaf-e0b438d26192)
+https://github.com/user-attachments/assets/fcecfce3-a939-4b03-beaf-e0b438d26192
 
 ## 🎯 What It Does
 
