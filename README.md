@@ -36,7 +36,7 @@ The notification displays twice, plays a sound, then automatically dismisses aft
 ```
 
 **Flow:**
-1. Every 30 seconds, query OpenSky for aircraft in a bounding box around your home
+1. Every 60 seconds, query OpenSky for aircraft in a bounding box around your home
 2. Calculate exact distance using the Haversine formula
 3. Filter to aircraft within your configured radius (default: 10 miles)
 4. For new aircraft (not recently notified), push to LaMetric
@@ -93,8 +93,12 @@ HOME_LONGITUDE=-6.2603
 
 # Tracking Configuration
 RADIUS_MILES=10                      # Detection radius
-POLL_INTERVAL_SECONDS=30             # How often to check
-NOTIFICATION_COOLDOWN_MINUTES=5      # Avoid duplicate alerts
+POLL_INTERVAL_SECONDS=60             # How often to check (60s recommended)
+COOLDOWN_MINUTES=5                   # Avoid duplicate alerts
+
+# OpenSky API (required for new accounts since March 2025)
+OPENSKY_CLIENT_ID=your-client-id
+OPENSKY_CLIENT_SECRET=your-client-secret
 ```
 
 ### 4. Test the connection
@@ -116,10 +120,10 @@ npm start
 | Command | Description |
 |---------|-------------|
 | `npm start` | Start the flight monitor service |
-| `npm run server` | Start with verbose logging |
 | `npm run test-push` | Send a test notification |
 | `npm run test-push -- "message"` | Send a custom message |
 | `npm run test-flight` | Send sample flight notification |
+| `npm run test-opensky` | Test OpenSky API connectivity |
 | `npm run reset` | Dismiss all notifications |
 
 ## 🔧 Configuration Options
@@ -131,8 +135,22 @@ npm start
 | `HOME_LATITUDE` | — | Your home latitude |
 | `HOME_LONGITUDE` | — | Your home longitude |
 | `RADIUS_MILES` | `10` | Aircraft detection radius in miles |
-| `POLL_INTERVAL_SECONDS` | `30` | API polling frequency |
-| `NOTIFICATION_COOLDOWN_MINUTES` | `5` | Prevent duplicate alerts |
+| `POLL_INTERVAL_SECONDS` | `60` | API polling frequency |
+| `COOLDOWN_MINUTES` | `5` | Prevent duplicate alerts |
+| `OPENSKY_CLIENT_ID` | — | OpenSky OAuth2 client ID (required for new accounts) |
+| `OPENSKY_CLIENT_SECRET` | — | OpenSky OAuth2 client secret |
+| `FETCH_AIRCRAFT_METADATA` | `false` | Enable aircraft type lookups (uses extra API credits) |
+
+### OpenSky API Authentication
+
+**New accounts (created after March 2025)** require OAuth2 authentication:
+
+1. Register at [opensky-network.org](https://opensky-network.org/)
+2. Go to your account settings → API Clients
+3. Create a new client to get your `client_id` and `client_secret`
+4. Add these to your `.env` file
+
+The app automatically handles token refresh when tokens expire (~30 minutes).
 
 ## 🏠 Deployment Options
 
@@ -221,8 +239,10 @@ LAMETRIC_API_KEY=your-api-key
 HOME_LATITUDE=53.3498
 HOME_LONGITUDE=-6.2603
 RADIUS_MILES=10
-POLL_INTERVAL_SECONDS=30
-NOTIFICATION_COOLDOWN_MINUTES=5
+POLL_INTERVAL_SECONDS=60
+COOLDOWN_MINUTES=5
+OPENSKY_CLIENT_ID=your-client-id
+OPENSKY_CLIENT_SECRET=your-client-secret
 ```
 
 Press `Ctrl+X`, then `Y`, then `Enter` to save.
@@ -324,6 +344,97 @@ chmod +x ~/update-flight-tracker.sh
 | Pi 4 | ~3W | ~4W |
 
 A Pi Zero running 24/7 costs roughly **$1-2 per year** in electricity!
+
+### Option 3: Windows PC (24/7 Operation)
+
+If you have a Windows PC that stays on, you can run the flight tracker as a background service that starts automatically on boot.
+
+#### Prerequisites
+
+- Windows 10 or 11
+- Node.js installed ([download](https://nodejs.org/))
+- The app cloned and configured (see Quick Start above)
+
+#### Method A: Task Scheduler (Recommended — No extra software)
+
+1. **Open Task Scheduler**
+   - Press `Win + R`, type `taskschd.msc`, hit Enter
+
+2. **Create a new task**
+   - Click **Create Task** (not "Create Basic Task")
+
+3. **General tab**
+   - Name: `LaMetric Flight Tracker`
+   - Check ✅ **Run whether user is logged on or not**
+   - Check ✅ **Run with highest privileges**
+
+4. **Triggers tab**
+   - Click **New**
+   - Begin the task: **At startup**
+   - (Optional) Check "Delay task for" → **30 seconds** (allows network to connect)
+
+5. **Actions tab**
+   - Click **New**
+   - Action: **Start a program**
+   - Program/script: `C:\Program Files\nodejs\node.exe`
+   - Add arguments: `src/index.js`
+   - Start in: `C:\path\to\lametric-flight-tracker` (your app folder)
+
+6. **Settings tab**
+   - ❌ Uncheck "Stop the task if it runs longer than"
+   - ✅ Check "If the task fails, restart every" → **1 minute**
+   - Attempts: **3**
+
+7. Click **OK**, enter your Windows password when prompted
+
+**Test it:** Right-click the task → **Run**. Check your LaMetric for activity!
+
+#### Method B: NSSM (Run as a Windows Service)
+
+NSSM (Non-Sucking Service Manager) runs your app as a true Windows service with automatic restart on failure.
+
+1. **Download NSSM** from [nssm.cc/download](https://nssm.cc/download)
+
+2. **Extract** the zip and note the path to `nssm.exe`
+
+3. **Open PowerShell as Administrator** and navigate to the NSSM folder
+
+4. **Install the service:**
+
+   ```powershell
+   .\nssm.exe install LaMetricFlights "C:\Program Files\nodejs\node.exe" "C:\path\to\app\src\index.js"
+   .\nssm.exe set LaMetricFlights AppDirectory "C:\path\to\app"
+   .\nssm.exe set LaMetricFlights DisplayName "LaMetric Flight Tracker"
+   .\nssm.exe set LaMetricFlights Description "Monitors aircraft and pushes to LaMetric"
+   .\nssm.exe start LaMetricFlights
+   ```
+
+5. **Manage the service:**
+
+   ```powershell
+   .\nssm.exe status LaMetricFlights     # Check if running
+   .\nssm.exe restart LaMetricFlights    # Restart
+   .\nssm.exe stop LaMetricFlights       # Stop
+   .\nssm.exe remove LaMetricFlights     # Uninstall service
+   ```
+
+   Or use Windows Services (`services.msc`) to manage it graphically.
+
+#### Windows Troubleshooting
+
+**"curl is not recognized":**
+- Windows 10 (1803+) includes `curl.exe` by default
+- If missing, install via: `winget install curl`
+
+**"Cannot connect to LaMetric":**
+- Ensure PC and LaMetric are on the same network
+- Windows Firewall may block outbound connections — allow Node.js
+- Test with: `curl.exe -u "dev:YOUR_API_KEY" http://LAMETRIC_IP:8080/api/v2/device`
+
+**Task runs but no notifications:**
+- Check the "Start in" path is correct (must be the app folder)
+- View logs: Create a log file by changing arguments to:
+  `src/index.js > C:\path\to\app\logs\output.log 2>&1`
 
 ## 🔒 Security Notes
 
