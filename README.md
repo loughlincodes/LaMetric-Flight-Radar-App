@@ -4,7 +4,7 @@
 
 Get push notifications on your LaMetric Time whenever aircraft fly over your house. Perfect for aviation enthusiasts, plane spotters, or anyone curious about what's flying overhead.
 
-![LaMetric Time](https://developer.lametric.com/assets/images/time-logo.png)
+![LaMetric Time](https://github.com/user-attachments/assets/fcecfce3-a939-4b03-beaf-e0b438d26192)
 
 ## 🎯 What It Does
 
@@ -62,8 +62,8 @@ Alternatively, find the IP in your router's connected devices list.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/lametric-flight-tracker.git
-cd lametric-flight-tracker
+git clone https://github.com/loughlincodes/LaMetric-Flight-Radar-App.git
+cd LaMetric-Flight-Radar-App
 ```
 
 ### 2. Install dependencies
@@ -220,8 +220,8 @@ npm --version
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/lametric-flight-tracker.git
-cd lametric-flight-tracker
+git clone https://github.com/loughlincodes/LaMetric-Flight-Radar-App.git
+cd LaMetric-Flight-Radar-App
 
 # Install dependencies
 npm install
@@ -302,7 +302,7 @@ Add:
 
 ```bash
 #!/bin/bash
-cd ~/lametric-flight-tracker
+cd ~/LaMetric-Flight-Radar-App
 git pull
 npm install
 pm2 restart flight-tracker
@@ -355,7 +355,7 @@ If you have a Windows PC that stays on, you can run the flight tracker as a back
 - Node.js installed ([download](https://nodejs.org/))
 - The app cloned and configured (see Quick Start above)
 
-#### Method A: Task Scheduler (Recommended — No extra software)
+#### Using Task Scheduler (auto-start on boot)
 
 1. **Open Task Scheduler**
    - Press `Win + R`, type `taskschd.msc`, hit Enter
@@ -378,7 +378,7 @@ If you have a Windows PC that stays on, you can run the flight tracker as a back
    - Action: **Start a program**
    - Program/script: `C:\Program Files\nodejs\node.exe`
    - Add arguments: `src/index.js`
-   - Start in: `C:\path\to\lametric-flight-tracker` (your app folder)
+   - Start in: `C:\path\to\LaMetric-Flight-Radar-App` (your app folder)
 
 6. **Settings tab**
    - ❌ Uncheck "Stop the task if it runs longer than"
@@ -388,37 +388,6 @@ If you have a Windows PC that stays on, you can run the flight tracker as a back
 7. Click **OK**, enter your Windows password when prompted
 
 **Test it:** Right-click the task → **Run**. Check your LaMetric for activity!
-
-#### Method B: NSSM (Run as a Windows Service)
-
-NSSM (Non-Sucking Service Manager) runs your app as a true Windows service with automatic restart on failure.
-
-1. **Download NSSM** from [nssm.cc/download](https://nssm.cc/download)
-
-2. **Extract** the zip and note the path to `nssm.exe`
-
-3. **Open PowerShell as Administrator** and navigate to the NSSM folder
-
-4. **Install the service:**
-
-   ```powershell
-   .\nssm.exe install LaMetricFlights "C:\Program Files\nodejs\node.exe" "C:\path\to\app\src\index.js"
-   .\nssm.exe set LaMetricFlights AppDirectory "C:\path\to\app"
-   .\nssm.exe set LaMetricFlights DisplayName "LaMetric Flight Tracker"
-   .\nssm.exe set LaMetricFlights Description "Monitors aircraft and pushes to LaMetric"
-   .\nssm.exe start LaMetricFlights
-   ```
-
-5. **Manage the service:**
-
-   ```powershell
-   .\nssm.exe status LaMetricFlights     # Check if running
-   .\nssm.exe restart LaMetricFlights    # Restart
-   .\nssm.exe stop LaMetricFlights       # Stop
-   .\nssm.exe remove LaMetricFlights     # Uninstall service
-   ```
-
-   Or use Windows Services (`services.msc`) to manage it graphically.
 
 #### Windows Troubleshooting
 
